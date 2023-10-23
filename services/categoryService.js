@@ -1,6 +1,6 @@
 const slugify = require("slugify");
 const { catchAsync } = require("async-handler-express");
-
+const ApiError = require("../utils/apiError.js");
 const CategoryModel = require("../models/categoryModel.js");
 
 // @desc    Get All categories
@@ -25,12 +25,13 @@ exports.getCategories = catchAsync(async (req, res) => {
 // @route  GET /api/v1/categories/:id
 // @access public
 
-exports.getCategoryById = catchAsync(async (req, res) => {
+exports.getCategoryById = catchAsync(async (req, res, next) => {
 	const idOfCategory = req.params.id;
 	// console.log("😒 => idOfCategory:", idOfCategory);
 	const category = await CategoryModel.findById(idOfCategory);
 	if (!category) {
-		res.status(404).json({ message: "not find category" });
+		// res.status(404).json({ message: "not find category" });
+		return next(new ApiError("Can't find this Category", 404));
 	} else {
 		res.status(200).json({
 			message: "Success",
@@ -53,7 +54,7 @@ exports.createCategory = catchAsync(async (req, res) => {
 // @route  PUT /api/v1/categories/:id
 // @access Private
 
-exports.updateCategory = catchAsync(async (req, res) => {
+exports.updateCategory = catchAsync(async (req, res, next) => {
 	const id = req.params.id;
 	const name = req.body.name;
 	const category = await CategoryModel.findByIdAndUpdate(
@@ -63,7 +64,8 @@ exports.updateCategory = catchAsync(async (req, res) => {
 	);
 
 	if (!category) {
-		res.status(404).json({ message: "not find category" });
+		// res.status(404).json({ message: "not find category" });
+		return next(new ApiError("Can't find this Category", 404));
 	} else {
 		res.status(200).json({
 			message: "Success",
@@ -76,11 +78,12 @@ exports.updateCategory = catchAsync(async (req, res) => {
 // @route  DELETE /api/v1/categories/:id
 // @access Private
 
-exports.deleteCategory = catchAsync(async (req, res) => {
+exports.deleteCategory = catchAsync(async (req, res, next) => {
 	const id = req.params.id;
 	const category = await CategoryModel.findByIdAndDelete(id);
 	if (!category) {
-		res.status(404).json({ message: "not find category" });
+		// res.status(404).json({ message: "not find category" });
+		return next(new ApiError("Can't find this Category", 404));
 	} else {
 		res.status(200).json({
 			message: "Success",
