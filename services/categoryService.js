@@ -1,92 +1,53 @@
-const slugify = require("slugify");
-const { catchAsync } = require("async-handler-express");
-const ApiError = require("../utils/apiError.js");
-const CategoryModel = require("../models/categoryModel.js");
+const sharp = require('sharp');
+const { v4: uuidv4 } = require('uuid');
+const asyncHandler = require('express-async-handler');
 
-// @desc    Get All categories
-// @route  GET /api/v1/categories
-// @access public
-exports.getCategories = catchAsync(async (req, res) => {
-	// paginate categories
-	const limit = req.query.limit * 1 || 5;
-	const pages = req.query.page * 1 || 1;
-	const skip = (pages - 1) * limit;
+const factory = require('./handlersFactory');
+const { uploadSingleImage } = require('../middlewares/uploadImageMiddleware');
+const Category = require('../models/categoryModel');
 
-	const category = await CategoryModel.find({}).skip(skip).limit(limit);
-	res.status(200).json({
-		// result: "category",
-		pages,
-		result: category.length,
-		data: category,
-	});
+// Upload single image
+exports.uploadCategoryImage = uploadSingleImage('image');
+
+// Image processing
+exports.resizeImage = asyncHandler(async (req, res, next) => {
+  const filename = `category-${uuidv4()}-${Date.now()}.jpeg`;
+
+  if (req.file) {
+    await sharp(req.file.buffer)
+      .resize(600, 600)
+      .toFormat('jpeg')
+      .jpeg({ quality: 95 })
+      .toFile(`uploads/categories/${filename}`);
+
+    // Save image into our db
+    req.body.image = filename;
+  }
+
+  next();
 });
 
-// @desc   Get specific category by id
-// @route  GET /api/v1/categories/:id
-// @access public
+// @desc    Get list of categories
+// @route   GET /api/v1/categories
+// @access  Public
+exports.getCategories = factory.getAll(Category);
 
-exports.getCategoryById = catchAsync(async (req, res, next) => {
-	const idOfCategory = req.params.id;
-	// console.log("😒 => idOfCategory:", idOfCategory);
-	const category = await CategoryModel.findById(idOfCategory);
-	if (!category) {
-		// res.status(404).json({ message: "not find category" });
-		return next(new ApiError("Can't find this Category", 404));
-	} else {
-		res.status(200).json({
-			message: "Success",
-			data: category,
-		});
-	}
-});
+// @desc    Get specific category by id
+// @route   GET /api/v1/categories/:id
+// @access  Public
+exports.getCategory = factory.getOne(Category);
 
-// @desc    Create a category
-// @route  POST /api/v1/categories
-// @access private
-exports.createCategory = catchAsync(async (req, res) => {
-	const name = req.body.name;
+// @desc    Create category
+// @route   POST  /api/v1/categories
+// @access  Private/Admin-Manager
+exports.createCategory = factory.createOne(Category);
 
-	const Category = await CategoryModel.create({ name, slug: slugify(name) });
-	res.status(200).json({ data: Category });
-});
+// @desc    Update specific category
+// @route   PUT /api/v1/categories/:id
+// @access  Private/Admin-Manager
+exports.updateCategory = factory.updateOne(Category);
 
-// @desc   Update specific category by id
-// @route  PUT /api/v1/categories/:id
-// @access Private
-
-exports.updateCategory = catchAsync(async (req, res, next) => {
-	const id = req.params.id;
-	const name = req.body.name;
-	const category = await CategoryModel.findByIdAndUpdate(
-		{ _id: id },
-		{ name, slug: slugify(name) },
-		{ new: true }
-	);
-
-	if (!category) {
-		// res.status(404).json({ message: "not find category" });
-		return next(new ApiError("Can't find this Category", 404));
-	} else {
-		res.status(200).json({
-			message: "Success",
-			data: category,
-		});
-	}
-});
-
-// @desc   delete specific category by id
-// @route  DELETE /api/v1/categories/:id
-// @access Private
-
-exports.deleteCategory = catchAsync(async (req, res, next) => {
-	const id = req.params.id;
-	const category = await CategoryModel.findByIdAndDelete(id);
-	if (!category) {
-		// res.status(404).json({ message: "not find category" });
-		return next(new ApiError("Can't find this Category", 404));
-	} else {
-		res.status(200).json({
-			message: "Success",
-		});
-	}
-});
+// @desc    Delete specific category
+// @route   DELETE /api/v1/categories/:id
+// @access  Private/Admin
+exports.deleteCategory = factory.deleteOne(Category);

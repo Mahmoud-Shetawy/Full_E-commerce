@@ -3,9 +3,10 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const mongoose = require("mongoose");
 const dbConnection = require("./config/database.js");
-const categoryRoute = require("./routes/categoryRout.js");
 const ApiError = require("./utils/apiError.js");
 const globalError = require("./Middleware/errorMiddleware.js");
+const categoryRoute = require("./routes/categoryRout.js");
+const subCategoryRoute = require("./routes/subCategoryRout.js");
 
 dbConnection();
 
@@ -25,6 +26,7 @@ if (process.env.NODE_ENV === "development") {
 
 //mount Route
 app.use("/api/v1/categories", categoryRoute);
+app.use("/api/v1/subcategories", subCategoryRoute);
 
 app.all("*", (req, res, next) => {
 	next(new ApiError(`can't mount ${req.originalUrl}`, 400));
